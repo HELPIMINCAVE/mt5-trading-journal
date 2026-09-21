@@ -1,6 +1,7 @@
 # Secret files
 .DS_Store
 .env
+*.db
 
 # Folders
 .venv/
