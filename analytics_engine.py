@@ -1,7 +1,6 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-
 class AnalyticsEngine:
     """Quantitative analysis engine for calculating performance statistics,
 
