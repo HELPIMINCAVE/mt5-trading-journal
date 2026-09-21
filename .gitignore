@@ -1,0 +1,8 @@
+# Secret files
+.DS_Store
+.env
+
+# Folders
+.venv/
+.idea/
+__pycache__/
