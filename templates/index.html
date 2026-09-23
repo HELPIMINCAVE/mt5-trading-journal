@@ -3,10 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Trading Portfolio Dashboard</title>
-  <!-- Chart.js CDN -->
+  <title>MT5 History Screenshot Journal</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Google Fonts for clean typography -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
@@ -15,7 +13,6 @@
       --card-bg: #151d2a;
       --card-border: #232e42;
       --accent-green: #10b981;
-      --accent-green-glow: rgba(16, 185, 129, 0.15);
       --accent-blue: #3b82f6;
       --text-main: #f3f4f6;
       --text-muted: #9ca3af;
@@ -23,327 +20,114 @@
       --danger: #ef4444;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Inter', sans-serif;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; }
 
-    body {
-      background-color: var(--bg-color);
-      color: var(--text-main);
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
+    .screen { width: 100%; display: flex; justify-content: center; align-items: center; }
+    .hidden { display: none !important; }
 
-    /* Screen Transitions */
-    .screen {
-      width: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      transition: opacity 0.3s ease;
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    /* --- LOGIN CARD --- */
-    .login-container {
+    /* One-Time Screenshot Login Card */
+    .login-card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
-      padding: 2.5rem;
+      padding: 3rem 2.5rem;
       border-radius: 16px;
       width: 100%;
-      max-width: 420px;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-    }
-
-    .login-header {
-      margin-bottom: 2rem;
+      max-width: 520px;
       text-align: center;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
     }
 
-    .login-header h1 {
-      font-size: 1.75rem;
-      font-weight: 700;
-      color: var(--text-main);
-    }
-
-    .login-header p {
-      color: var(--text-muted);
-      font-size: 0.875rem;
-      margin-top: 0.25rem;
-    }
-
-    .form-group {
-      margin-bottom: 1.25rem;
-    }
-
-    .form-group label {
-      display: block;
-      font-size: 0.85rem;
-      font-weight: 500;
-      color: var(--text-muted);
-      margin-bottom: 0.5rem;
-    }
-
-    .form-group input {
-      width: 100%;
-      padding: 0.75rem 1rem;
-      background: var(--input-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 8px;
-      color: #fff;
-      font-size: 0.95rem;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    .form-group input:focus {
-      border-color: var(--accent-blue);
-    }
-
-    .btn-submit {
-      width: 100%;
-      padding: 0.85rem;
-      background: var(--accent-blue);
-      border: none;
-      border-radius: 8px;
-      color: #fff;
-      font-weight: 600;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
-      margin-top: 0.5rem;
-    }
-
-    .btn-submit:hover {
-      background: #2563eb;
-    }
-
-    .btn-submit:active {
-      transform: scale(0.99);
-    }
-
-    /* --- DASHBOARD VIEW --- */
-    .dashboard-container {
-      width: 100%;
-      max-width: 1100px;
-      padding: 2rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-    }
-
-    .dash-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding-bottom: 1rem;
-      border-bottom: 1px solid var(--card-border);
-    }
-
-    .account-info {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-
-    .avatar {
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      background: var(--accent-blue);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 1.1rem;
-    }
-
-    .account-details h2 {
-      font-size: 1.1rem;
-      font-weight: 600;
-    }
-
-    .account-details p {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-    }
-
-    .btn-logout {
-      background: transparent;
-      border: 1px solid var(--card-border);
-      color: var(--text-muted);
-      padding: 0.5rem 1rem;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      transition: all 0.2s;
-    }
-
-    .btn-logout:hover {
-      border-color: var(--danger);
-      color: var(--danger);
-    }
-
-    /* Stat Cards Grid */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 1rem;
-    }
-
-    .stat-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      padding: 1.25rem;
+    .drop-zone {
+      border: 2px dashed var(--accent-blue);
       border-radius: 12px;
+      padding: 3rem 1.5rem;
+      margin-top: 1.5rem;
+      background: var(--input-bg);
+      cursor: pointer;
+      transition: all 0.2s ease;
     }
 
-    .stat-card span {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      font-weight: 500;
+    .drop-zone:hover, .drop-zone.dragover {
+      background: rgba(59, 130, 246, 0.12);
+      border-color: var(--accent-green);
     }
 
-    .stat-card .value {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin-top: 0.3rem;
-    }
+    /* Main Journal Dashboard */
+    .dashboard-container { width: 100%; max-width: 1100px; padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; }
+    .dash-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--card-border); padding-bottom: 1rem; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+    .stat-card { background: var(--card-bg); border: 1px solid var(--card-border); padding: 1.25rem; border-radius: 12px; }
+    .stat-card span { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+    .stat-card .value { font-size: 1.5rem; font-weight: 700; margin-top: 0.3rem; }
 
     .text-green { color: var(--accent-green); }
+    .chart-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.5rem; }
+    .chart-wrapper { position: relative; height: 380px; width: 100%; }
 
-    /* Chart Section */
-    .chart-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 12px;
-      padding: 1.5rem;
-    }
-
-    .chart-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1.5rem;
-      flex-wrap: wrap;
-      gap: 1rem;
-    }
-
-    .chart-header h3 {
-      font-size: 1.1rem;
-      font-weight: 600;
-    }
-
-    .chart-controls {
-      display: flex;
-      gap: 0.5rem;
-      background: var(--input-bg);
-      padding: 4px;
-      border-radius: 8px;
-      border: 1px solid var(--card-border);
-    }
-
-    .filter-btn {
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      padding: 0.35rem 0.8rem;
-      border-radius: 6px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .filter-btn.active {
-      background: var(--card-border);
-      color: #fff;
-    }
-
-    .chart-wrapper {
-      position: relative;
-      height: 380px;
-      width: 100%;
-    }
+    .btn-logout { background: transparent; border: 1px solid var(--card-border); color: var(--text-muted); padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+    .btn-logout:hover { border-color: var(--danger); color: var(--danger); }
   </style>
 </head>
 <body>
 
-  <!-- LOGIN SCREEN -->
+  <!-- 1. SCREENSHOT LOGIN SCREEN -->
   <div id="login-screen" class="screen">
-    <div class="login-container">
-      <div class="login-header">
-        <h1>Trader Portal</h1>
-        <p>Enter your details to access account analytics</p>
+    <div class="login-card">
+      <h2 style="font-size: 1.6rem;">Screenshot Login</h2>
+      <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 0.5rem;">
+        Upload a screenshot of your full MT5 trading history to authenticate and generate calculations.
+      </p>
+
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+        <svg width="52" height="52" fill="none" stroke="#3b82f6" viewBox="0 0 24 24" style="margin: 0 auto 0.8rem;">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+        </svg>
+        <strong style="display:block; color: var(--text-main); font-size: 1rem;">Select or Drag Full History Image</strong>
+        <p id="status-text" style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.4rem;">Supports PNG, JPG, WEBP</p>
+        <input type="file" id="file-input" class="hidden" accept="image/*" onchange="handleFileSelect(event)" />
       </div>
-      <form id="login-form">
-        <div class="form-group">
-          <label for="account-id">Account ID</label>
-          <input type="text" id="account-id" placeholder="e.g. TRADER-9921" required />
-        </div>
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input type="password" id="password" placeholder="••••••••" required />
-        </div>
-        <button type="submit" class="btn-submit">Sign In</button>
-      </form>
     </div>
   </div>
 
-  <!-- DASHBOARD SCREEN -->
+  <!-- 2. DASHBOARD SCREEN -->
   <div id="dashboard-screen" class="screen hidden">
     <div class="dashboard-container">
 
-      <!-- Top Header -->
       <div class="dash-header">
-        <div class="account-info">
-          <div class="avatar" id="user-avatar">T</div>
-          <div class="account-details">
-            <h2 id="display-account-id">TRADER-9921</h2>
-            <p>Live Account • MetaTrader 5</p>
-          </div>
+        <div>
+          <h2 id="account-title">ACCOUNT: MT5-HISTORY</h2>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">One-Time Session Authenticated via Screenshot</p>
         </div>
-        <button class="btn-logout" id="logout-btn">Log Out</button>
+        <button class="btn-logout" onclick="logoutSession()">End Session / New Screenshot</button>
       </div>
 
-      <!-- Stat Cards -->
       <div class="stats-grid">
         <div class="stat-card">
-          <span>Starting Balance</span>
-          <div class="value">$10,000.00</div>
+          <span>Initial Deposit</span>
+          <div class="value" id="val-balance">$0.00</div>
         </div>
         <div class="stat-card">
-          <span>Current Equity</span>
-          <div class="value text-green" id="stat-equity">$18,450.00</div>
+          <span>Current Balance/Equity</span>
+          <div class="value text-green" id="val-equity">$0.00</div>
         </div>
         <div class="stat-card">
-          <span>Total Net Profit</span>
-          <div class="value text-green" id="stat-profit">+$8,450.00 (+84.5%)</div>
+          <span>Net Profit</span>
+          <div class="value text-green" id="val-profit">+$0.00</div>
+        </div>
+        <div class="stat-card">
+          <span>Total Executed Trades</span>
+          <div class="value" id="val-trades">0</div>
         </div>
         <div class="stat-card">
           <span>Win Rate</span>
-          <div class="value">68.4%</div>
+          <div class="value" id="val-winrate">0.0%</div>
         </div>
       </div>
 
-      <!-- Equity Curve Chart -->
       <div class="chart-card">
-        <div class="chart-header">
-          <h3>Equity Curve Analytics</h3>
-          <div class="chart-controls">
-            <button class="filter-btn" onclick="updateTimeframe('1M')">1M</button>
-            <button class="filter-btn" onclick="updateTimeframe('3M')">3M</button>
-            <button class="filter-btn active" onclick="updateTimeframe('ALL')">ALL</button>
-          </div>
-        </div>
+        <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Full History Equity Growth Curve</h3>
         <div class="chart-wrapper">
           <canvas id="equityChart"></canvas>
         </div>
@@ -353,72 +137,72 @@
   </div>
 
   <script>
-    // --- MOCK DATA FOR EQUITY CURVE ---
-    const datasets = {
-      '1M': {
-        labels: ['Feb 01', 'Feb 05', 'Feb 10', 'Feb 15', 'Feb 20', 'Feb 25', 'Mar 01'],
-        data: [15200, 15800, 15400, 16900, 17200, 17800, 18450],
-        equity: '$18,450.00',
-        profit: '+$3,250.00 (+21.3%)'
-      },
-      '3M': {
-        labels: ['Dec 01', 'Dec 15', 'Jan 01', 'Jan 15', 'Feb 01', 'Feb 15', 'Mar 01'],
-        data: [12000, 12800, 13500, 14200, 15200, 16900, 18450],
-        equity: '$18,450.00',
-        profit: '+$6,450.00 (+53.7%)'
-      },
-      'ALL': {
-        labels: ['Jan 01', 'Jan 15', 'Feb 01', 'Feb 15', 'Mar 01', 'Mar 15', 'Apr 01', 'Apr 15', 'May 01'],
-        data: [10000, 10800, 10400, 12100, 11800, 14200, 13900, 16500, 18450],
-        equity: '$18,450.00',
-        profit: '+$8,450.00 (+84.5%)'
-      }
-    };
-
     let equityChart = null;
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
 
-    // --- DOM ELEMENTS ---
-    const loginScreen = document.getElementById('login-screen');
-    const dashboardScreen = document.getElementById('dashboard-screen');
-    const loginForm = document.getElementById('login-form');
-    const accountIdInput = document.getElementById('account-id');
-    const displayAccountId = document.getElementById('display-account-id');
-    const userAvatar = document.getElementById('user-avatar');
-    const logoutBtn = document.getElementById('logout-btn');
+    // Drag-and-Drop Event Listeners
+    ['dragenter', 'dragover'].forEach(name => {
+      dropZone.addEventListener(name, (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    });
+    ['dragleave', 'drop'].forEach(name => {
+      dropZone.addEventListener(name, (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); });
+    });
 
-    // --- AUTHENTICATION LOGIC ---
-    loginForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const accountId = accountIdInput.value.trim();
+    dropZone.addEventListener('drop', (e) => {
+      const files = e.dataTransfer.files;
+      if (files.length > 0) authenticateWithScreenshot(files[0]);
+    });
 
-      if (accountId) {
-        // Update user display details
-        displayAccountId.textContent = accountId;
-        userAvatar.textContent = accountId.charAt(0).toUpperCase();
+    function handleFileSelect(e) {
+      if (e.target.files.length > 0) authenticateWithScreenshot(e.target.files[0]);
+    }
 
-        // Switch screen
-        loginScreen.classList.add('hidden');
-        dashboardScreen.classList.remove('hidden');
+    async function authenticateWithScreenshot(file) {
+      document.getElementById('status-text').textContent = `Reading full history from ${file.name}...`;
 
-        // Render Chart
-        if (!equityChart) {
-          initChart();
+      const formData = new FormData();
+      formData.append('screenshot', file);
+
+      try {
+        const response = await fetch('/api/login-via-screenshot', {
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.status === 'success') {
+          const data = result.data;
+
+          // Populate Dashboard Stats
+          document.getElementById('account-title').textContent = `ACCOUNT: ${data.account_id}`;
+          document.getElementById('val-balance').textContent = `$${data.starting_balance.toLocaleString()}`;
+          document.getElementById('val-equity').textContent = `$${data.current_equity.toLocaleString()}`;
+          document.getElementById('val-profit').textContent = `$${data.total_profit.toLocaleString()}`;
+          document.getElementById('val-trades').textContent = data.total_trades;
+          document.getElementById('val-winrate').textContent = `${data.win_rate}%`;
+
+          // Switch Views
+          document.getElementById('login-screen').classList.add('hidden');
+          document.getElementById('dashboard-screen').classList.remove('hidden');
+
+          // Render Equity Curve
+          renderChart(data.equity_curve.labels, data.equity_curve.data);
+        } else {
+          alert(`Login Failed: ${result.message}`);
+          document.getElementById('status-text').textContent = 'Supports PNG, JPG, WEBP';
         }
+      } catch (err) {
+        alert('Server error during OCR extraction.');
+        document.getElementById('status-text').textContent = 'Supports PNG, JPG, WEBP';
       }
-    });
+    }
 
-    logoutBtn.addEventListener('click', () => {
-      dashboardScreen.classList.add('hidden');
-      loginScreen.classList.remove('hidden');
-      accountIdInput.value = '';
-      document.getElementById('password').value = '';
-    });
-
-    // --- CHART.JS INITIALIZATION ---
-    function initChart() {
+    function renderChart(labels, data) {
       const ctx = document.getElementById('equityChart').getContext('2d');
+      if (equityChart) equityChart.destroy();
 
-      // Create gradient fill under line
       const gradient = ctx.createLinearGradient(0, 0, 0, 350);
       gradient.addColorStop(0, 'rgba(16, 185, 129, 0.35)');
       gradient.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
@@ -426,77 +210,36 @@
       equityChart = new Chart(ctx, {
         type: 'line',
         data: {
-          labels: datasets['ALL'].labels,
+          labels: labels,
           datasets: [{
-            label: 'Account Equity ($)',
-            data: datasets['ALL'].data,
+            label: 'Equity ($)',
+            data: data,
             borderColor: '#10b981',
-            borderWidth: 3,
+            borderWidth: 2.5,
             backgroundColor: gradient,
             fill: true,
-            tension: 0.35, // Smooth curve
-            pointBackgroundColor: '#10b981',
-            pointBorderColor: '#151d2a',
-            pointBorderWidth: 2,
-            pointRadius: 4,
-            pointHoverRadius: 7
+            tension: 0.25,
+            pointRadius: data.length > 50 ? 0 : 3
           }]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: '#1f293d',
-              titleColor: '#9ca3af',
-              bodyColor: '#10b981',
-              bodyFont: { weight: 'bold', size: 14 },
-              padding: 12,
-              borderColor: '#232e42',
-              borderWidth: 1,
-              displayColors: false,
-              callbacks: {
-                label: (context) => `Equity: $${context.raw.toLocaleString()}`
-              }
-            }
-          },
+          plugins: { legend: { display: false } },
           scales: {
-            x: {
-              grid: { color: 'rgba(255, 255, 255, 0.05)' },
-              ticks: { color: '#9ca3af' }
-            },
-            y: {
-              grid: { color: 'rgba(255, 255, 255, 0.05)' },
-              ticks: {
-                color: '#9ca3af',
-                callback: (val) => `$${val.toLocaleString()}`
-              }
-            }
+            x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#9ca3af' } },
+            y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#9ca3af' } }
           }
         }
       });
     }
 
-    // --- TIMEFRAME FILTER SWITCHER ---
-    function updateTimeframe(period) {
-      if (!equityChart) return;
-
-      // Update button active state
-      document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.textContent === period) btn.classList.add('active');
-      });
-
-      // Update Chart Data
-      const selectedData = datasets[period];
-      equityChart.data.labels = selectedData.labels;
-      equityChart.data.datasets[0].data = selectedData.data;
-      equityChart.update();
-
-      // Update Header Stats
-      document.getElementById('stat-equity').textContent = selectedData.equity;
-      document.getElementById('stat-profit').textContent = selectedData.profit;
+    async function logoutSession() {
+      await fetch('/api/logout', { method: 'POST' });
+      document.getElementById('dashboard-screen').classList.add('hidden');
+      document.getElementById('login-screen').classList.remove('hidden');
+      document.getElementById('status-text').textContent = 'Supports PNG, JPG, WEBP';
+      fileInput.value = '';
     }
   </script>
 </body>

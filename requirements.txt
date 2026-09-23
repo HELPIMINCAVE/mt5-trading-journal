@@ -1,2 +1,4 @@
 flask
 mt5-mac
+pytesseract
+pillow
