@@ -21,12 +21,12 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-    body { background-color: var(--bg-color); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; }
+    body { background-color: var(--bg-color); color: var(--text-main); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 2rem 0; }
 
     .screen { width: 100%; display: flex; justify-content: center; align-items: center; }
     .hidden { display: none !important; }
 
-    /* One-Time Screenshot Login Card */
+    /* Login Screen Card */
     .login-card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
@@ -53,18 +53,31 @@
       border-color: var(--accent-green);
     }
 
-    /* Main Journal Dashboard */
-    .dashboard-container { width: 100%; max-width: 1100px; padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; }
+    /* Dashboard Layout */
+    .dashboard-container { width: 100%; max-width: 1100px; padding: 0 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; }
     .dash-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--card-border); padding-bottom: 1rem; }
 
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; }
     .stat-card { background: var(--card-bg); border: 1px solid var(--card-border); padding: 1.25rem; border-radius: 12px; }
     .stat-card span { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
-    .stat-card .value { font-size: 1.5rem; font-weight: 700; margin-top: 0.3rem; }
+    .stat-card .value { font-size: 1.4rem; font-weight: 700; margin-top: 0.3rem; }
 
     .text-green { color: var(--accent-green); }
-    .chart-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.5rem; }
-    .chart-wrapper { position: relative; height: 380px; width: 100%; }
+    .text-red { color: var(--danger); }
+
+    .chart-card, .table-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.5rem; }
+    .chart-wrapper { position: relative; height: 320px; width: 100%; }
+
+    /* Trade History Log Table */
+    .table-wrapper { overflow-x: auto; margin-top: 1rem; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem; }
+    th { background: var(--input-bg); padding: 0.75rem 1rem; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--card-border); }
+    td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--card-border); }
+    tr:hover { background: rgba(255, 255, 255, 0.02); }
+
+    .badge { padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
+    .badge-buy { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+    .badge-sell { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
 
     .btn-logout { background: transparent; border: 1px solid var(--card-border); color: var(--text-muted); padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; transition: 0.2s; }
     .btn-logout:hover { border-color: var(--danger); color: var(--danger); }
@@ -100,16 +113,17 @@
           <h2 id="account-title">ACCOUNT: MT5-HISTORY</h2>
           <p style="font-size: 0.8rem; color: var(--text-muted);">One-Time Session Authenticated via Screenshot</p>
         </div>
-        <button class="btn-logout" onclick="logoutSession()">End Session / New Screenshot</button>
+        <button class="btn-logout" onclick="logoutSession()">New Screenshot</button>
       </div>
 
+      <!-- Stat Cards Grid -->
       <div class="stats-grid">
         <div class="stat-card">
           <span>Initial Deposit</span>
           <div class="value" id="val-balance">$0.00</div>
         </div>
         <div class="stat-card">
-          <span>Current Balance/Equity</span>
+          <span>Current Equity</span>
           <div class="value text-green" id="val-equity">$0.00</div>
         </div>
         <div class="stat-card">
@@ -117,8 +131,12 @@
           <div class="value text-green" id="val-profit">+$0.00</div>
         </div>
         <div class="stat-card">
-          <span>Total Executed Trades</span>
-          <div class="value" id="val-trades">0</div>
+          <span>Total Wins</span>
+          <div class="value text-green" id="val-wins">0</div>
+        </div>
+        <div class="stat-card">
+          <span>Total Losses</span>
+          <div class="value text-red" id="val-losses">0</div>
         </div>
         <div class="stat-card">
           <span>Win Rate</span>
@@ -126,10 +144,33 @@
         </div>
       </div>
 
+      <!-- Equity Curve Chart -->
       <div class="chart-card">
         <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Full History Equity Growth Curve</h3>
         <div class="chart-wrapper">
           <canvas id="equityChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Trade Log Table -->
+      <div class="table-card">
+        <h3 style="font-size: 1.1rem;">Parsed Trade History Log</h3>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Open Time</th>
+                <th>Close Time</th>
+                <th>Symbol</th>
+                <th>Type</th>
+                <th>Lots</th>
+                <th>Profit ($)</th>
+              </tr>
+            </thead>
+            <tbody id="trade-log-body">
+              <!-- Dynamically populated rows -->
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -141,7 +182,6 @@
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
 
-    // Drag-and-Drop Event Listeners
     ['dragenter', 'dragover'].forEach(name => {
       dropZone.addEventListener(name, (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
     });
@@ -159,7 +199,7 @@
     }
 
     async function authenticateWithScreenshot(file) {
-      document.getElementById('status-text').textContent = `Reading full history from ${file.name}...`;
+      document.getElementById('status-text').textContent = `Reading timestamps & trades from ${file.name}...`;
 
       const formData = new FormData();
       formData.append('screenshot', file);
@@ -175,19 +215,23 @@
         if (result.status === 'success') {
           const data = result.data;
 
-          // Populate Dashboard Stats
+          // Populate Stat Cards
           document.getElementById('account-title').textContent = `ACCOUNT: ${data.account_id}`;
           document.getElementById('val-balance').textContent = `$${data.starting_balance.toLocaleString()}`;
           document.getElementById('val-equity').textContent = `$${data.current_equity.toLocaleString()}`;
           document.getElementById('val-profit').textContent = `$${data.total_profit.toLocaleString()}`;
-          document.getElementById('val-trades').textContent = data.total_trades;
+          document.getElementById('val-wins').textContent = data.total_wins;
+          document.getElementById('val-losses').textContent = data.total_losses;
           document.getElementById('val-winrate').textContent = `${data.win_rate}%`;
 
-          // Switch Views
+          // Populate Trade Log Table
+          populateTradeLog(data.trades);
+
+          // Switch View Screens
           document.getElementById('login-screen').classList.add('hidden');
           document.getElementById('dashboard-screen').classList.remove('hidden');
 
-          // Render Equity Curve
+          // Render Equity Curve Chart
           renderChart(data.equity_curve.labels, data.equity_curve.data);
         } else {
           alert(`Login Failed: ${result.message}`);
@@ -199,11 +243,34 @@
       }
     }
 
+    function populateTradeLog(trades) {
+      const tbody = document.getElementById('trade-log-body');
+      tbody.innerHTML = '';
+
+      trades.forEach(trade => {
+        const tr = document.createElement('tr');
+        const pnlClass = trade.net_profit >= 0 ? 'text-green' : 'text-red';
+        const badgeClass = trade.order_type === 'BUY' ? 'badge-buy' : 'badge-sell';
+
+        tr.innerHTML = `
+          <td>${trade.open_time}</td>
+          <td>${trade.close_time}</td>
+          <td><strong>${trade.symbol}</strong></td>
+          <td><span class="badge ${badgeClass}">${trade.order_type}</span></td>
+          <td>${trade.lots}</td>
+          <td class="${pnlClass}" style="font-weight: 600;">
+            ${trade.net_profit >= 0 ? '+' : ''}$${trade.net_profit.toFixed(2)}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
     function renderChart(labels, data) {
       const ctx = document.getElementById('equityChart').getContext('2d');
       if (equityChart) equityChart.destroy();
 
-      const gradient = ctx.createLinearGradient(0, 0, 0, 350);
+      const gradient = ctx.createLinearGradient(0, 0, 0, 320);
       gradient.addColorStop(0, 'rgba(16, 185, 129, 0.35)');
       gradient.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
 
@@ -218,7 +285,7 @@
             borderWidth: 2.5,
             backgroundColor: gradient,
             fill: true,
-            tension: 0.25,
+            tension: 0.2,
             pointRadius: data.length > 50 ? 0 : 3
           }]
         },

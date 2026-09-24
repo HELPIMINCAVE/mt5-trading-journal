@@ -1,15 +1,17 @@
-import os
-import re
-import secrets
+import os, re, secrets, pytesseract
 from datetime import datetime, timezone
 from flask import Flask, jsonify, render_template, request, session
 from PIL import Image
-import pytesseract
 from analytics_engine import AnalyticsEngine
 from storage_engine import StorageEngine
 
 app = Flask(__name__)
+# Cryptographically random key for secure session cookies
 app.secret_key = secrets.token_hex(24)
+
+# Tesseract binary path for macOS (Homebrew Apple Silicon)
+# Uncomment or adjust for your system if needed:
+pytesseract.pytesseract.tesseract_cmd = "/opt/homebrew/bin/tesseract"
 
 storage = StorageEngine("journal_database.db")
 analytics = AnalyticsEngine(storage)
@@ -19,83 +21,135 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
 def parse_full_history_screenshot(image_path: str) -> dict:
-    """Parses a full MT5 history screenshot extracting initial balance
+    """Pre-processes MT5 desktop dark-mode screenshots, performing 3x DPI upscaling
 
-    and all individual trade rows to calculate total equity evolution.
+    and luminance thresholding to extract open/close times, wins/losses, symbols,
+    and net PnL accurately.
     """
-    img = Image.open(image_path)
-    ocr_text = pytesseract.image_to_string(img)
+    raw_img = Image.open(image_path)
 
-    # 1. Extract Account ID / Broker Info
-    account_match = re.search(r"\b\d{6,10}\b", ocr_text)
-    account_id = (
-        account_match.group(0) if account_match else f"MT5-{secrets.token_hex(3).upper()}"
+    # 1. Upscale image 3x to raise DPI for small MT5 desktop text
+    orig_w, orig_h = raw_img.size
+    upscaled_img = raw_img.resize(
+        (orig_w * 3, orig_h * 3), Image.Resampling.LANCZOS
     )
 
-    # 2. Extract Initial Deposit / Starting Balance
-    deposit_match = re.search(
-        r"(?:Deposit|Balance)[:\s]+\$?([\d,]+\.\d{2})",
-        ocr_text,
-        re.IGNORECASE,
-    )
-    starting_balance = (
-        float(deposit_match.group(1).replace(",", ""))
-        if deposit_match
-        else 1000.00
-    )
+    # 2. Convert to Grayscale & apply Luminance Thresholding
+    # Converts white/light text (>65 luminance) to pure BLACK (0)
+    # and dark grey background (<65 luminance) to pure WHITE (255)
+    gray = upscaled_img.convert("L")
+    binary_img = gray.point(lambda p: 0 if p > 65 else 255, mode="1")
 
-    # 3. Extract All Trade Lines across full history
-    # Matches patterns like: "EURUSD buy 0.10 at 1.0850 ... +45.00" or "GBPUSD sell 0.50 ... -12.50"
-    trade_pattern = re.compile(
-        r"([A-Z0-9]{6})\s+(buy|sell)\s+([\d\.]+)\s+.*?([+-]?[\d,]+\.\d{2})$",
-        re.MULTILINE | re.IGNORECASE,
-    )
+    # 3. OCR extraction with Page Segmentation Mode 6 (Single uniform text block)
+    ocr_text = pytesseract.image_to_string(binary_img, config="--psm 6")
 
-    raw_trades = trade_pattern.findall(ocr_text)
-
+    lines = ocr_text.splitlines()
     parsed_trades = []
-    current_equity = starting_balance
-    equity_points = [starting_balance]
-    labels = ["Deposit"]
 
+    detected_deposit = None
     total_wins = 0
     total_losses = 0
+    total_profit = 0.0
 
-    for idx, (symbol, order_type, lots, pnl_str) in enumerate(raw_trades, start=1):
-        pnl = float(pnl_str.replace(",", ""))
-        current_equity += pnl
+    for line in lines:
+        # A. Check if line contains an explicit Deposit row
+        if re.search(r"\bdeposit\b", line, re.IGNORECASE):
+            deposit_nums = re.findall(r"[+-]?\d+\.\d{2}", line)
+            if deposit_nums:
+                detected_deposit = float(deposit_nums[-1].replace(",", ""))
+            continue
+
+        # B. Check for trade execution rows (buy or sell)
+        type_match = re.search(r"\b(buy|sell)\b", line, re.IGNORECASE)
+        if not type_match:
+            continue
+
+        order_type = type_match.group(1).upper()
+
+        # Extract timestamps (e.g., 2026.09.22 09:54:53)
+        timestamps = re.findall(
+            r"\d{4}[\.-]\d{2}[\.-]\d{2}\s+\d{2}:\d{2}:\d{2}", line
+        )
+        open_time = timestamps[0] if len(timestamps) > 0 else "N/A"
+        close_time = timestamps[1] if len(timestamps) > 1 else open_time
+
+        # Extract symbol (e.g., goldmicro, EURUSD, XAUUSD, BTCUSD)
+        symbol_match = re.search(
+            r"\b([a-zA-Z0-9\._]{3,12})\b", line, re.IGNORECASE
+        )
+        symbol = (
+            symbol_match.group(1).upper()
+            if symbol_match
+            else "CUSTOM_SYMBOL"
+        )
+
+        # Extract lot size (e.g., 0.1, 0.01, 1.0)
+        lot_match = re.search(r"\b(\d+\.\d{1,2})\b", line)
+        lots = float(lot_match.group(1)) if lot_match else 0.10
+
+        # Extract net profit (filtering out MT5 desktop return percentages like -0.03%)
+        decimal_numbers = re.findall(r"[+-]?\d+\.\d{2}", line)
+
+        if decimal_numbers:
+            if "%" in line and len(decimal_numbers) >= 2:
+                pnl = float(decimal_numbers[-2].replace(",", ""))
+            else:
+                pnl = float(decimal_numbers[-1].replace(",", ""))
+        else:
+            pnl = 0.00
+
+        total_profit += pnl
 
         if pnl > 0:
             total_wins += 1
         elif pnl < 0:
             total_losses += 1
 
+        trade_idx = len(parsed_trades) + 1
         parsed_trades.append(
             {
-                "mt5_ticket": 100000 + idx,
-                "symbol": symbol.upper(),
-                "order_type": order_type.upper(),
-                "lots": float(lots),
-                "open_time": datetime.now(timezone.utc).isoformat(),
-                "close_time": datetime.now(timezone.utc).isoformat(),
+                "mt5_ticket": 400000000 + trade_idx,
+                "open_time": open_time,
+                "close_time": close_time,
+                "symbol": symbol,
+                "order_type": order_type,
+                "lots": lots,
                 "net_profit": pnl,
             }
         )
 
-        equity_points.append(round(current_equity, 2))
-        labels.append(f"Trade #{idx}")
-
     total_trades = len(parsed_trades)
-    win_rate = (
-        round((total_wins / total_trades) * 100, 1) if total_trades > 0 else 0.0
+    if total_trades == 0:
+        raise ValueError(
+            "No valid MT5 trade rows could be extracted from image."
+        )
+
+    # Default starting balance to 0.00 if no deposit row exists in screenshot
+    starting_balance = (
+        detected_deposit if detected_deposit is not None else 0.00
     )
+    current_equity = starting_balance + total_profit
+
+    # Generate points for equity curve chart
+    running_eq = starting_balance
+    equity_points = [running_eq]
+    labels = ["Start"]
+
+    for i, t in enumerate(parsed_trades, start=1):
+        running_eq += t["net_profit"]
+        equity_points.append(round(running_eq, 2))
+        labels.append(f"Trade #{i}")
+
+    win_rate = round((total_wins / total_trades) * 100, 1)
 
     return {
-        "account_id": account_id,
-        "starting_balance": starting_balance,
+        "account_id": f"MT5-DESKTOP-{secrets.token_hex(2).upper()}",
+        "starting_balance": round(starting_balance, 2),
         "current_equity": round(current_equity, 2),
-        "total_profit": round(current_equity - starting_balance, 2),
+        "total_profit": round(total_profit, 2),
         "total_trades": total_trades,
+        "total_wins": total_wins,
+        "total_losses": total_losses,
         "win_rate": win_rate,
         "trades": parsed_trades,
         "equity_curve": {"labels": labels, "data": equity_points},
@@ -104,9 +158,7 @@ def parse_full_history_screenshot(image_path: str) -> dict:
 
 @app.route("/")
 def index():
-    # If session exists, frontend will load directly into the dashboard
-    is_authenticated = "account_id" in session
-    return render_template("index.html", authenticated=is_authenticated)
+    return render_template("index.html")
 
 
 @app.route("/api/login-via-screenshot", methods=["POST"])
@@ -128,10 +180,9 @@ def login_via_screenshot():
     file.save(filepath)
 
     try:
-        # Parse entire trading history from screenshot
         parsed_data = parse_full_history_screenshot(filepath)
 
-        # Store trade records into database
+        # Store trade records in database engine
         for trade in parsed_data["trades"]:
             try:
                 storage.insert_trade_record(
@@ -148,7 +199,7 @@ def login_via_screenshot():
             except Exception:
                 pass
 
-        # Authorize one-time session
+        # Establish one-time login session
         session["account_id"] = parsed_data["account_id"]
 
         return jsonify({"status": "success", "data": parsed_data})
